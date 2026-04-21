@@ -17,3 +17,7 @@ backend/results/*
 .DS_Store
 .idea/
 .vscode/
+
+# Local docs drafts (not tracked)
+docs_additions.tex
+docs_additions_openai.tex

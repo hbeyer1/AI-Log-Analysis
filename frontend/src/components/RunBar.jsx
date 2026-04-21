@@ -1,6 +1,5 @@
 export function RunBar({
   children,
-  estimate,
   running,
   job,
   onRun,
@@ -12,16 +11,6 @@ export function RunBar({
   return (
     <div className="run-bar">
       {children}
-      {estimate && (
-        <span className="cost">
-          ~${estimate.estimated_cost_usd?.toFixed(3)}
-          {estimate.sessions !== undefined ? ` · ${estimate.sessions} sessions` : ''}
-          {estimate.dimensions !== undefined ? ` · ${estimate.dimensions} dims` : ''}
-          {estimate.estimated_input_tokens !== undefined
-            ? ` · ${estimate.estimated_input_tokens.toLocaleString()} in / ${estimate.estimated_output_tokens.toLocaleString()} out`
-            : ''}
-        </span>
-      )}
       <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 12 }}>
         {running && (
           <>
@@ -49,15 +38,27 @@ export function useJobPoll(jobId, onDone) {
 
 export function ModelSelect({ value, onChange, disabled, options }) {
   const opts = options ?? [
-    { id: 'claude-sonnet-4-6', label: 'Sonnet 4.6' },
-    { id: 'claude-haiku-4-5-20251001', label: 'Haiku 4.5' },
-    { id: 'claude-opus-4-7', label: 'Opus 4.7' },
+    { id: 'claude-sonnet-4-6', label: 'Claude · Sonnet 4.6', group: 'Anthropic' },
+    { id: 'claude-haiku-4-5-20251001', label: 'Claude · Haiku 4.5', group: 'Anthropic' },
+    { id: 'claude-opus-4-7', label: 'Claude · Opus 4.7', group: 'Anthropic' },
+    { id: 'gpt-5', label: 'OpenAI · GPT-5', group: 'OpenAI' },
+    { id: 'gpt-5-mini', label: 'OpenAI · GPT-5 mini', group: 'OpenAI' },
+    { id: 'gpt-5-nano', label: 'OpenAI · GPT-5 nano', group: 'OpenAI' },
+    { id: 'gpt-4.1', label: 'OpenAI · GPT-4.1', group: 'OpenAI' },
   ];
+  const byGroup = opts.reduce((acc, o) => {
+    (acc[o.group || 'Other'] ||= []).push(o);
+    return acc;
+  }, {});
   return (
     <>
       <label style={{ fontSize: 12, color: 'var(--text-dim)', marginRight: 8 }}>Model:</label>
       <select value={value} onChange={(e) => onChange(e.target.value)} disabled={disabled}>
-        {opts.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
+        {Object.entries(byGroup).map(([group, list]) => (
+          <optgroup key={group} label={group}>
+            {list.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
+          </optgroup>
+        ))}
       </select>
     </>
   );

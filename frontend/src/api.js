@@ -41,21 +41,23 @@ export const api = {
   getPrompt: (name) => get(`/api/prompts/${name}`),
   savePrompt: (name, content) => jsonPut(`/api/prompts/${name}`, { content }),
 
-  // Extract (Part 1a)
-  extractEstimate: (body) => jsonPost('/api/extract/estimate', body),
-  extractRun: (body) => jsonPost('/api/extract/run', body),
-  extractResult: () => get('/api/extract/result'),
-  extractRejected: () => get('/api/extract/rejected'),
+  // Stage 1 — PII redaction
+  piiRun: (body) => jsonPost('/api/pii/run', body),
+  piiResult: () => get('/api/pii/result'),
 
-  // Knowledge base
-  getKb: () => get('/api/knowledge-base'),
-  saveKb: (body) => jsonPut('/api/knowledge-base', body),
+  // Stage 2 — Prompt 1 (conversation features + objectives)
+  prompt1Run: (body) => jsonPost('/api/prompt1/run', body),
+  prompt1Result: () => get('/api/prompt1/result'),
 
-  // Clean (Part 1b)
-  cleanEstimate: (body) => jsonPost('/api/clean/estimate', body),
-  cleanRun: (body) => jsonPost('/api/clean/run', body),
-  cleanResult: () => get('/api/clean/result'),
-  cleanExcluded: () => get('/api/clean/excluded'),
+  // Stage 3 — Prompt 2 (per-objective interview)
+  prompt2Run: (body) => jsonPost('/api/prompt2/run', body),
+  prompt2Result: () => get('/api/prompt2/result'),
+
+  // Final published datasets
+  finalConversations: () => get('/api/final/conversations'),
+  finalObjectives: () => get('/api/final/objectives'),
+  downloadBundleUrl: `${BASE}/api/final/bundle`,
+  finalCostReport: () => get('/api/final/cost_report'),
 
   job: (id) => get(`/api/jobs/${id}`),
 };

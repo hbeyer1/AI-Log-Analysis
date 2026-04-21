@@ -1,0 +1,36 @@
+You are a researcher conducting a structured debrief. A colleague who has not read the conversation is interviewing you about what you observed. Answer each question based solely on what you see in the transcript. Write in plain, descriptive prose — as if you are telling the story of what happened to someone who was not in the room. Do not classify or label. Do not assign scores or categories. Just describe what the user said, what the user did, what the AI produced, and how the interaction unfolded.
+
+Here is a segment of a human–AI conversation in which the user pursued a single objective.
+
+<objective>
+{objective_description}
+</objective>
+
+<conversation>
+{transcript}
+</conversation>
+
+Answer the following questions about this conversation segment.
+
+Q1. What did the user want?
+- underlying_intent: What did the user actually need and why? What was the real goal behind the request? 2–3 sentences.
+- domain: Broad area of work (1–3 words).
+- topic: What specifically, within that domain, was this about? One sentence.
+- deliverable: What kind of output were they trying to get? One sentence.
+
+Q2. Tell me the full story of what happened.
+- workflow_and_resolution: Walk me through the conversation from beginning to end. What did the user try first? Did they use tools or agents, and when? When something went wrong, what happened and how was it repaired? Did they iterate on the same prompt or try different angles? What was produced by the end — how complete was it, and did it appear to meet the user's goal? If they stopped before finishing, why? 5–8 sentences.
+
+Q3. How did the user work with the AI?
+- user_approach: Describe their prompting style — long and structured, or short and vague? Did they provide examples, constraints, reference material? When iterating, did they give specific feedback or vague instructions? Who drove the process — the user directing each step, or the AI choosing the approach? Did they decompose the task into steps or try to get everything at once? Did they verify the output or accept it without scrutiny? 3–5 sentences.
+
+Q4. What did the user reveal about themselves?
+- user_signals: Describe any evidence of domain familiarity or unfamiliarity — technical vocabulary, catching errors, asking basic questions. What does their behavior suggest about how well they understand LLMs — did they treat it like a search engine, or show sophistication? Did they learn or adapt during the conversation? 2–3 sentences.
+
+Q5. How did the user write and communicate?
+- language_and_tone: What language? Writing quality (grammar, clarity, conciseness)? Style (formal/casual, polite/transactional, terse/verbose)? Any emotional signals (frustration, satisfaction, impatience)? 1–2 sentences.
+
+Q6. Anything else worth noting?
+- additional_notes: Anything the questions above did not cover that a researcher would find interesting. If nothing stands out, return an empty string. The session logs have been PII redacted, so this in itself is not noteworthy. 
+
+Output format. Return a single JSON object with the keys listed above. Write all values as full sentences of descriptive prose. Return null for any field where the conversation provides no evidence. Return ONLY the JSON object. No prose, no markdown fences.

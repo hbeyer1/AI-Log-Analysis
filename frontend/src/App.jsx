@@ -1,14 +1,14 @@
 import { useEffect, useState } from 'react';
 import { api } from './api';
 import { Upload } from './components/Upload';
-import { ExtractPage } from './components/ExtractPage';
-import { CleanPage } from './components/CleanPage';
+import { PipelinePage } from './components/PipelinePage';
+import { AnalysisPage } from './components/AnalysisPage';
 import { PromptsPage } from './components/Prompts';
 import './App.css';
 
 export default function App() {
   const [status, setStatus] = useState(null);
-  const [phase, setPhase] = useState('extract');
+  const [phase, setPhase] = useState('pipeline');
   const [dataset, setDataset] = useState(null);
 
   const refreshStatus = () => api.status().then(setStatus).catch(() => setStatus({}));
@@ -31,17 +31,17 @@ export default function App() {
     }
   }, [status, dataset]);
 
-  const phases = [
-    { id: 'extract', label: '1 · Extract objectives', enabled: !!dataset },
-    { id: 'clean', label: '2 · Clean objectives', enabled: !!status?.has_raw_objectives },
-  ];
+  const analysisReady = !!(status?.has_features || status?.has_objectives);
 
   return (
     <div className="app">
       <div className="topbar">
         <h1>AI Log Analysis</h1>
         <span className={`status-chip ${status?.anthropic_configured ? 'ok' : 'missing'}`}>
-          {status?.anthropic_configured ? '✓ Anthropic' : '⚠ Anthropic key missing'}
+          {status?.anthropic_configured ? '✓ Anthropic' : '⚠ Anthropic key'}
+        </span>
+        <span className={`status-chip ${status?.openai_configured ? 'ok' : 'missing'}`}>
+          {status?.openai_configured ? '✓ OpenAI' : '⚠ OpenAI key'}
         </span>
         {dataset && (
           <span className="status-chip">
@@ -60,17 +60,22 @@ export default function App() {
             Upload & overview
           </div>
           <div className="sidebar-section">Pipeline</div>
-          {phases.map((p) => (
-            <div
-              key={p.id}
-              className={`phase-item ${phase === p.id ? 'active' : ''}`}
-              onClick={() => p.enabled && setPhase(p.id)}
-              style={!p.enabled ? { opacity: 0.4, cursor: 'not-allowed' } : {}}
-            >
-              {p.label}
-              {!p.enabled && <span className="badge">locked</span>}
-            </div>
-          ))}
+          <div
+            className={`phase-item ${phase === 'pipeline' ? 'active' : ''}`}
+            onClick={() => dataset && setPhase('pipeline')}
+            style={!dataset ? { opacity: 0.4, cursor: 'not-allowed' } : {}}
+          >
+            Run stages
+            {!dataset && <span className="badge">locked</span>}
+          </div>
+          <div
+            className={`phase-item ${phase === 'analysis' ? 'active' : ''}`}
+            onClick={() => analysisReady && setPhase('analysis')}
+            style={!analysisReady ? { opacity: 0.4, cursor: 'not-allowed' } : {}}
+          >
+            Analysis
+            {!analysisReady && <span className="badge">locked</span>}
+          </div>
           <div className="sidebar-section">Configuration</div>
           <div
             className={`phase-item ${phase === 'prompts' ? 'active' : ''}`}
@@ -83,17 +88,25 @@ export default function App() {
         <section className="panel">
           {phase === 'data' && <DataPanel dataset={dataset} onLoaded={(d) => { setDataset(d); refreshStatus(); }} />}
           {phase === 'prompts' && <PromptsPage />}
-          {phase === 'extract' && (
-            <ExtractPage substantiveCount={dataset?.substantive_count || 0} />
+          {phase === 'pipeline' && dataset && (
+            <PipelinePage
+              substantiveCount={dataset.substantive_count || 0}
+              status={status}
+              onAnyRunDone={refreshStatus}
+              onGoToAnalysis={analysisReady ? () => setPhase('analysis') : null}
+            />
           )}
-          {phase === 'clean' && (
-            <CleanPage hasRawObjectives={!!status?.has_raw_objectives} />
-          )}
-          {phase !== 'data' && phase !== 'prompts' && !dataset && (
+          {phase === 'pipeline' && !dataset && (
             <div className="panel-body">
               <div className="empty-state">
                 Upload a <code>conversations.json</code> file to begin.
               </div>
+            </div>
+          )}
+          {phase === 'analysis' && analysisReady && <AnalysisPage />}
+          {phase === 'analysis' && !analysisReady && (
+            <div className="panel-body">
+              <div className="empty-state">Run the pipeline first.</div>
             </div>
           )}
         </section>

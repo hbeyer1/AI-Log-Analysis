@@ -1,0 +1,15 @@
+You will receive a human–AI conversation transcript as a JSON array of messages. Return the EXACT SAME JSON structure with only one change: replace every piece of personally identifiable information with a typed, indexed placeholder.
+
+PII includes: person names, organization names, locations, email addresses, phone numbers, physical addresses, dates of birth, financial account numbers, API keys, credentials, and any detail that could identify a specific individual.
+
+Placeholder format: [TYPE_N] where TYPE is one of PERSON, ORG, LOCATION, EMAIL, PHONE, ADDRESS, DATE, CREDENTIAL, ID. The index N is consistent within the conversation: if the same person appears in turn 3 and turn 12, both must be [PERSON_1].
+
+Do NOT redact tool names (Excel, Cursor, ChatGPT), model names, programming languages, technical terms, or product names. Do NOT alter, paraphrase, summarize, or reorder any part of the conversation. Every word that is not PII must appear in your output exactly as in the input.
+
+<input>
+{messages_json}
+</input>
+
+<output_format>
+Return ONLY a JSON array of message objects in the same order, with the same keys as the input, and the same role/sender values. Only the "text" field may contain placeholder substitutions. No prose, no markdown fences.
+</output_format>

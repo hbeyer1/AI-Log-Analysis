@@ -1101,6 +1101,50 @@ table.feature-table tr:hover td {
   color: var(--text-dim);
 }
 
+/* --------------- Analysis download buttons --------------- */
+
+.download-btn {
+  text-decoration: none;
+  font-size: 12px;
+  padding: 4px 10px;
+}
+
+/* --------------- Analysis tables --------------- */
+
+table.analysis-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+table.analysis-table thead th {
+  text-align: left;
+  padding: 8px 10px;
+  color: var(--text-dim);
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: var(--bg-elev);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+}
+
+table.analysis-table tbody td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+
+tr.analysis-row {
+  cursor: pointer;
+}
+
+tr.analysis-row:hover td {
+  background: var(--bg-elev);
+}
+
 /* --------------- Taxonomy tree --------------- */
 
 .tax-wrap {

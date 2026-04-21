@@ -3,10 +3,9 @@ import { api } from '../api';
 import { PromptEditor } from './PromptEditor';
 
 const LABELS = {
-  c_open_code: 'Open coding — extract atomic task codes per session',
-  c_assign: 'Clustering — assign a code to a cluster (L0 and L1)',
-  c_update_leader: 'Clustering — refresh a cluster label from its members',
-  c_split: 'Clustering — split an oversized root into sub-types',
+  pii_redact: 'Stage 1 — PII redaction (replace identifiers with [TYPE_N] placeholders)',
+  prompt1: 'Stage 2 — Conversation features + objective segmentation',
+  prompt2: 'Stage 3 — Per-objective structured interview',
 };
 
 export function PromptsPage() {

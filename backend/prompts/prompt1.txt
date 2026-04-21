@@ -1,0 +1,30 @@
+You are analyzing a human–AI conversation. Your task is to extract basic descriptive features of the conversation and identify each distinct objective the user pursued. Report only what is observable in the transcript.
+
+<conversation>
+Conversation ID: {conversation_id}
+
+Transcript (each turn is labelled with its 0-based index and role):
+
+{transcript}
+</conversation>
+
+Extract the following information from this conversation.
+
+1. Conversation features. Return the following fields for the conversation as a whole:
+- work_related: Is this conversation related to the user's professional work? (true / false). Personal uses such as restaurant recommendations or non-work travel planning are false. Event planning for a work context is true.
+- num_objectives: Integer count of distinct objectives.
+- num_turns: Total number of messages (user + assistant).
+- conversation_duration_sec: Integer seconds from first to last message (null if timestamps are unavailable).
+- initial_prompt_length: Character count of the first user message.
+- avg_message_length_user: Mean character count per user message.
+- avg_message_length_assistant: Mean character count per assistant message.
+- attachments: Object with keys "count" (int) and "types" (list of strings) describing files attached by the user.
+- tools_used: List of distinct tools invoked during the conversation (e.g., web_search, code_execution, image_generation).
+- artifacts_created: Object with keys "count" (int) and "types" (list of strings) describing artifacts produced (e.g., code, table, image, document).
+
+2. Objective segmentation. An objective is a coherent goal: fix a bug, draft an email, understand a concept. A follow-up on the same goal is not a new objective. A conversation may have one or several. For each objective, return:
+- objective_id: Sequential integer starting at 1.
+- description: One sentence describing what the user was trying to accomplish.
+- turn_indices: The 0-based turn numbers belonging to this objective (include both user and assistant turns).
+
+3. Output format. Return a single JSON object with keys "conversation_features" and "objectives" (array). Return null for any field that cannot be determined. Return ONLY the JSON object. No prose, no markdown fences.
