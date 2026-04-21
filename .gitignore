@@ -1,0 +1,19 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+.env
+
+node_modules/
+dist/
+.vite/
+
+# Runtime artifacts
+backend/uploads/*
+!backend/uploads/.gitkeep
+backend/results/*
+!backend/results/.gitkeep
+
+.DS_Store
+.idea/
+.vscode/
