@@ -4,25 +4,15 @@ from __future__ import annotations
 
 import asyncio
 import json
-import re
 import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Optional
 
 from data import Session, Message
+from json_utils import extract_json_array
 from llm_client import LLMClient, DEFAULT_MODEL_LIGHT
-
-
-PROMPTS_DIR = Path(__file__).parent / "prompts"
-
-
-def load_prompt(name: str) -> str:
-    return (PROMPTS_DIR / name).read_text()
-
-
-def save_prompt(name: str, content: str) -> None:
-    (PROMPTS_DIR / name).write_text(content)
+from prompt_utils import load_prompt, save_prompt
 
 
 @dataclass
@@ -47,25 +37,6 @@ def _messages_payload(session: Session) -> list[dict[str, Any]]:
         {"idx": i, "role": "user" if m.sender == "human" else m.sender, "text": m.text}
         for i, m in enumerate(session.messages)
     ]
-
-
-def _strip_fences(text: str) -> str:
-    s = text.strip()
-    m = re.match(r"^```(?:json)?\s*(.*?)\s*```\s*$", s, re.DOTALL)
-    return m.group(1).strip() if m else s
-
-
-def _extract_json_array(text: str) -> Optional[list[Any]]:
-    cleaned = _strip_fences(text)
-    start = cleaned.find("[")
-    end = cleaned.rfind("]")
-    if start < 0 or end <= start:
-        return None
-    try:
-        parsed = json.loads(cleaned[start:end + 1])
-    except json.JSONDecodeError:
-        return None
-    return parsed if isinstance(parsed, list) else None
 
 
 # Accept redacted text up to 1.5× longer (placeholders can be verbose) and
@@ -122,7 +93,7 @@ async def _redact_one(
         res.input_tokens += result.input_tokens
         res.output_tokens += result.output_tokens
         res.cost_usd += result.cost_usd
-        arr = _extract_json_array(result.text)
+        arr = extract_json_array(result.text)
 
         reason = None
         if arr is None:
@@ -140,7 +111,7 @@ async def _redact_one(
             res.input_tokens += retry.input_tokens
             res.output_tokens += retry.output_tokens
             res.cost_usd += retry.cost_usd
-            arr = _extract_json_array(retry.text)
+            arr = extract_json_array(retry.text)
             reason = _verify(session.messages, arr) if arr is not None else "unparseable_response"
 
         if reason is None and arr is not None:

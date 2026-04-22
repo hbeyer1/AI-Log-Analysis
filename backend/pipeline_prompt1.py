@@ -3,26 +3,20 @@ One LLM call per (optionally redacted) conversation. Writes conv_features.jsonl.
 from __future__ import annotations
 
 import asyncio
-import json
-import re
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable, Optional
 
-from data import Session, Message
+from data import Session, Message, role_of
+from json_utils import extract_json_object
 from llm_client import LLMClient, DEFAULT_MODEL_HEAVY
+from prompt_utils import load_prompt
 
-
-PROMPTS_DIR = Path(__file__).parent / "prompts"
 
 INITIAL_MAX_TOKENS = 8192
 MAX_TOKENS_CEILING = 32768
 BACKOFF_BASE_SECONDS = 0.5
-
-
-def load_prompt(name: str) -> str:
-    return (PROMPTS_DIR / name).read_text()
 
 
 @dataclass
@@ -48,42 +42,15 @@ class Prompt1Result:
     error: Optional[str] = None
 
 
-def _role_of(m: Message) -> str:
-    if m.sender == "human":
-        return "user"
-    if m.sender == "assistant":
-        return "assistant"
-    return m.sender or "system"
-
-
 def format_transcript(session: Session) -> str:
     lines: list[str] = []
     for i, m in enumerate(session.messages):
-        role = _role_of(m)
+        role = role_of(m)
         header = f"[Turn {i} | {role}" + (f" | {m.created_at}" if m.created_at else "") + "]"
         lines.append(header)
         lines.append(m.text.rstrip())
         lines.append("")
     return "\n".join(lines).strip()
-
-
-def _strip_fences(text: str) -> str:
-    s = text.strip()
-    m = re.match(r"^```(?:json)?\s*(.*?)\s*```\s*$", s, re.DOTALL)
-    return m.group(1).strip() if m else s
-
-
-def _extract_json_object(text: str) -> Optional[dict[str, Any]]:
-    cleaned = _strip_fences(text)
-    start = cleaned.find("{")
-    end = cleaned.rfind("}")
-    if start < 0 or end <= start:
-        return None
-    try:
-        parsed = json.loads(cleaned[start:end + 1])
-    except json.JSONDecodeError:
-        return None
-    return parsed if isinstance(parsed, dict) else None
 
 
 def _parse_objectives(raw: Any, n_turns: int) -> list[Objective]:
@@ -147,7 +114,7 @@ async def _run_one(
             res.output_tokens += result.output_tokens
             res.cost_usd += result.cost_usd
 
-            parsed = _extract_json_object(result.text)
+            parsed = extract_json_object(result.text)
             if parsed is not None and not result.truncated:
                 obj = parsed
                 break

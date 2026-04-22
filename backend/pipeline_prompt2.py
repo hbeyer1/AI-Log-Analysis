@@ -3,18 +3,15 @@ objective on the sliced sub-transcript. Writes objectives.jsonl."""
 from __future__ import annotations
 
 import asyncio
-import json
-import re
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable, Optional
 
-from data import Session, Message
+from data import Session, Message, role_of
+from json_utils import extract_json_object
 from llm_client import LLMClient, DEFAULT_MODEL_HEAVY
-
-
-PROMPTS_DIR = Path(__file__).parent / "prompts"
+from prompt_utils import load_prompt
 
 
 INTERVIEW_FIELDS = (
@@ -28,10 +25,6 @@ INTERVIEW_FIELDS = (
     "language_and_tone",
     "additional_notes",
 )
-
-
-def load_prompt(name: str) -> str:
-    return (PROMPTS_DIR / name).read_text()
 
 
 @dataclass
@@ -48,44 +41,17 @@ class ObjectiveReport:
     error: Optional[str] = None
 
 
-def _role_of(m: Message) -> str:
-    if m.sender == "human":
-        return "user"
-    if m.sender == "assistant":
-        return "assistant"
-    return m.sender or "system"
-
-
 def format_sub_transcript(session: Session, turn_indices: list[int]) -> str:
     ordered = sorted(set(i for i in turn_indices if 0 <= i < len(session.messages)))
     lines: list[str] = []
     for i in ordered:
         m = session.messages[i]
-        role = _role_of(m)
+        role = role_of(m)
         header = f"[Turn {i} | {role}" + (f" | {m.created_at}" if m.created_at else "") + "]"
         lines.append(header)
         lines.append(m.text.rstrip())
         lines.append("")
     return "\n".join(lines).strip()
-
-
-def _strip_fences(text: str) -> str:
-    s = text.strip()
-    m = re.match(r"^```(?:json)?\s*(.*?)\s*```\s*$", s, re.DOTALL)
-    return m.group(1).strip() if m else s
-
-
-def _extract_json_object(text: str) -> Optional[dict[str, Any]]:
-    cleaned = _strip_fences(text)
-    start = cleaned.find("{")
-    end = cleaned.rfind("}")
-    if start < 0 or end <= start:
-        return None
-    try:
-        parsed = json.loads(cleaned[start:end + 1])
-    except json.JSONDecodeError:
-        return None
-    return parsed if isinstance(parsed, dict) else None
 
 
 @dataclass
@@ -148,14 +114,14 @@ async def _run_one(
         rep.output_tokens += result.output_tokens
         rep.cost_usd += result.cost_usd
 
-        parsed = _extract_json_object(result.text)
+        parsed = extract_json_object(result.text)
         if parsed is None:
             strict = prompt + "\n\nYour previous response was not valid JSON. Return ONLY the JSON object, no prose."
             retry = await client.complete(strict, model=model, max_tokens=4096, temperature=0.0)
             rep.input_tokens += retry.input_tokens
             rep.output_tokens += retry.output_tokens
             rep.cost_usd += retry.cost_usd
-            parsed = _extract_json_object(retry.text) or {}
+            parsed = extract_json_object(retry.text) or {}
 
         rep.fields = {k: parsed.get(k) for k in INTERVIEW_FIELDS}
     except Exception as e:

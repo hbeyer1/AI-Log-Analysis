@@ -133,3 +133,11 @@ def parse_conversations(raw: list[dict[str, Any]]) -> list[Session]:
 
 def filter_substantive(sessions: list[Session]) -> list[Session]:
     return [s for s in sessions if s.is_substantive]
+
+
+def role_of(m: Message) -> str:
+    if m.sender == "human":
+        return "user"
+    if m.sender == "assistant":
+        return "assistant"
+    return m.sender or "system"
