@@ -161,7 +161,7 @@ function PIITable({ rows }) {
       <thead>
         <tr style={{ textAlign: 'left', color: 'var(--text-dim)' }}>
           <th style={{ padding: 6 }}>Conversation</th>
-          <th style={{ padding: 6 }}>Status</th>
+          <th style={{ padding: 6 }}>Status <span style={{ color: 'var(--text-faint)', fontWeight: 400 }}>(basic verification)</span></th>
           <th style={{ padding: 6 }}>Messages</th>
           <th style={{ padding: 6 }}>Failure reason</th>
         </tr>
