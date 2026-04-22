@@ -28,6 +28,10 @@ from llm_client import LLMClient, DEFAULT_MODEL_HEAVY
 
 PROMPTS_DIR = Path(__file__).parent / "prompts"
 
+INITIAL_MAX_TOKENS = 8192
+MAX_TOKENS_CEILING = 32768
+BACKOFF_BASE_SECONDS = 0.5
+
 
 def load_prompt(name: str) -> str:
     return (PROMPTS_DIR / name).read_text()
@@ -139,6 +143,7 @@ async def _run_one(
     session: Session,
     prompt_template: str,
     model: str,
+    max_retries: int = 2,
 ) -> Prompt1Result:
     started = time.monotonic()
     res = Prompt1Result(
@@ -150,22 +155,44 @@ async def _run_one(
     )
     try:
         transcript = format_transcript(session)
-        prompt = (prompt_template
-                  .replace("{conversation_id}", session.uuid)
-                  .replace("{transcript}", transcript))
-        result = await client.complete(prompt, model=model, max_tokens=8192, temperature=0.0)
-        res.input_tokens += result.input_tokens
-        res.output_tokens += result.output_tokens
-        res.cost_usd += result.cost_usd
+        base_prompt = (prompt_template
+                       .replace("{conversation_id}", session.uuid)
+                       .replace("{transcript}", transcript))
 
-        obj = _extract_json_object(result.text)
+        obj: Optional[dict[str, Any]] = None
+        prompt = base_prompt
+        max_tokens = INITIAL_MAX_TOKENS
+        last_failure = ""
+
+        # One initial attempt plus up to `max_retries` follow-ups.
+        for attempt in range(max_retries + 1):
+            result = await client.complete(prompt, model=model, max_tokens=max_tokens, temperature=0.0)
+            res.input_tokens += result.input_tokens
+            res.output_tokens += result.output_tokens
+            res.cost_usd += result.cost_usd
+
+            parsed = _extract_json_object(result.text)
+            if parsed is not None and not result.truncated:
+                obj = parsed
+                break
+
+            if attempt == max_retries:
+                last_failure = "truncated" if result.truncated else "unparseable_json"
+                break
+
+            # Exponential backoff between attempts.
+            await asyncio.sleep(BACKOFF_BASE_SECONDS * (2 ** attempt))
+
+            # Truncation gets a bigger budget; parse failure gets a strict-JSON nudge.
+            if result.truncated:
+                max_tokens = min(max_tokens * 2, MAX_TOKENS_CEILING)
+                prompt = base_prompt
+            else:
+                prompt = base_prompt + "\n\nYour previous response was not valid JSON. Return ONLY the JSON object, no prose."
+
         if obj is None:
-            strict = prompt + "\n\nYour previous response was not valid JSON. Return ONLY the JSON object, no prose."
-            retry = await client.complete(strict, model=model, max_tokens=8192, temperature=0.0)
-            res.input_tokens += retry.input_tokens
-            res.output_tokens += retry.output_tokens
-            res.cost_usd += retry.cost_usd
-            obj = _extract_json_object(retry.text) or {}
+            res.error = f"{last_failure}_after_{max_retries}_retries"
+            obj = {}
 
         features = obj.get("conversation_features")
         if isinstance(features, dict):
@@ -184,6 +211,7 @@ async def run_prompt1(
     prompt_template: Optional[str] = None,
     model: str = DEFAULT_MODEL_HEAVY,
     concurrency: int = 5,
+    max_retries: int = 2,
     progress_cb: Optional[Callable[[int, int], None]] = None,
 ) -> list[Prompt1Result]:
     if prompt_template is None:
@@ -197,7 +225,7 @@ async def run_prompt1(
     async def one(s: Session) -> Prompt1Result:
         nonlocal done
         async with sem:
-            out = await _run_one(client, s, prompt_template, model)
+            out = await _run_one(client, s, prompt_template, model, max_retries=max_retries)
         async with lock:
             done += 1
             if progress_cb:

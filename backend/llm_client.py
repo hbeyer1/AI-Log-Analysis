@@ -85,10 +85,15 @@ class CompletionResult:
     input_tokens: int
     output_tokens: int
     model: str
+    stop_reason: Optional[str] = None
 
     @property
     def cost_usd(self) -> float:
         return estimate_cost(self.model, self.input_tokens, self.output_tokens)
+
+    @property
+    def truncated(self) -> bool:
+        return self.stop_reason == "max_tokens"
 
 
 class LLMClient:
@@ -154,6 +159,7 @@ class LLMClient:
             input_tokens=msg.usage.input_tokens,
             output_tokens=msg.usage.output_tokens,
             model=model,
+            stop_reason=getattr(msg, "stop_reason", None),
         )
 
     async def _complete_openai(
@@ -180,11 +186,14 @@ class LLMClient:
         usage = getattr(resp, "usage", None)
         in_tok = getattr(usage, "prompt_tokens", 0) if usage else 0
         out_tok = getattr(usage, "completion_tokens", 0) if usage else 0
+        finish = getattr(choice, "finish_reason", None)
+        stop_reason = "max_tokens" if finish == "length" else finish
         return CompletionResult(
             text=text,
             input_tokens=in_tok,
             output_tokens=out_tok,
             model=model,
+            stop_reason=stop_reason,
         )
 
 
