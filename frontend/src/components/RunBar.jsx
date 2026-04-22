@@ -41,9 +41,7 @@ export function ModelSelect({ value, onChange, disabled, options }) {
     { id: 'claude-sonnet-4-6', label: 'Claude · Sonnet 4.6', group: 'Anthropic' },
     { id: 'claude-haiku-4-5-20251001', label: 'Claude · Haiku 4.5', group: 'Anthropic' },
     { id: 'claude-opus-4-7', label: 'Claude · Opus 4.7', group: 'Anthropic' },
-    { id: 'gpt-5', label: 'OpenAI · GPT-5', group: 'OpenAI' },
-    { id: 'gpt-5-mini', label: 'OpenAI · GPT-5 mini', group: 'OpenAI' },
-    { id: 'gpt-5-nano', label: 'OpenAI · GPT-5 nano', group: 'OpenAI' },
+    { id: 'gpt-5.2-chat-latest', label: 'OpenAI · GPT-5.2 Chat (Instant)', group: 'OpenAI' },
     { id: 'gpt-4.1', label: 'OpenAI · GPT-4.1', group: 'OpenAI' },
   ];
   const byGroup = opts.reduce((acc, o) => {

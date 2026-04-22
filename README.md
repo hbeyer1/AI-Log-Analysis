@@ -45,10 +45,10 @@ Supported models (selectable per stage in the UI):
 | Anthropic | `claude-sonnet-4-6` | Stage 2 & 3 default |
 | Anthropic | `claude-haiku-4-5-20251001` | Stage 1 default |
 | Anthropic | `claude-opus-4-7` | Heaviest option |
-| OpenAI | `gpt-5` | Sonnet-equivalent |
-| OpenAI | `gpt-5-mini` | Haiku-equivalent |
-| OpenAI | `gpt-5-nano` | Cheapest, for Stage 1 bulk |
-| OpenAI | `gpt-4.1` | Sonnet-equivalent fallback |
+| OpenAI | `gpt-5.2-chat-latest` | Chat-style ("Instant") model, fast, adaptive reasoning |
+| OpenAI | `gpt-4.1` | Classic chat, supports `temperature=0` for deterministic runs |
+
+`gpt-5.2-chat-latest` does not accept a custom `temperature` (OpenAI locks all `gpt-5.*` variants to the default), so you'll see more run-to-run variance on prose fields than with Claude or `gpt-4.1`. `gpt-4.1` runs at `temperature=0` for reproducible validation runs.
 
 ```bash
 # Frontend

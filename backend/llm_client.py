@@ -20,11 +20,17 @@ ANTHROPIC_PRICES = {
 }
 
 OPENAI_PRICES = {
-    "gpt-5": {"in": 1.25, "out": 10.0},
-    "gpt-5-mini": {"in": 0.25, "out": 2.0},
-    "gpt-5-nano": {"in": 0.05, "out": 0.40},
+    # Indicative prices as of April 2026. Verify against OpenAI's pricing page before
+    # trusting for anything budget-sensitive.
+    "gpt-5.2-chat-latest": {"in": 1.25, "out": 10.0},
     "gpt-4.1": {"in": 2.0, "out": 8.0},
 }
+
+
+# Fixed reasoning effort for GPT-5.x / o-series models. "medium" is the
+# sweet spot for structured extraction: enough reasoning to converge on
+# consistent output without the latency and cost of "high"/"xhigh".
+DEFAULT_REASONING_EFFORT = "medium"
 
 DEFAULT_MODEL_HEAVY = "claude-sonnet-4-6"
 DEFAULT_MODEL_LIGHT = "claude-haiku-4-5-20251001"
@@ -44,6 +50,20 @@ def _openai_supports_temperature(model: str) -> bool:
     if m.startswith("o1") or m.startswith("o3") or m.startswith("o4"):
         return False
     return True
+
+
+def _openai_supports_reasoning_effort(model: str) -> bool:
+    """GPT-5.x thinking models and o-series accept reasoning_effort
+    (none/low/medium/high/xhigh). Chat-style variants (anything with
+    "chat-latest" in the ID) and classic chat models (gpt-4.1, gpt-4o) do not."""
+    m = (model or "").lower()
+    if "chat-latest" in m:
+        return False
+    if m.startswith("gpt-5"):
+        return True
+    if m.startswith("o1") or m.startswith("o3") or m.startswith("o4"):
+        return True
+    return False
 
 
 def _price_table(model: str) -> Optional[dict[str, float]]:
@@ -152,6 +172,8 @@ class LLMClient:
         }
         if temperature is not None and _openai_supports_temperature(model):
             kwargs["temperature"] = temperature
+        if _openai_supports_reasoning_effort(model):
+            kwargs["reasoning_effort"] = DEFAULT_REASONING_EFFORT
         resp = await client.chat.completions.create(**kwargs)
         choice = resp.choices[0]
         text = (choice.message.content or "").strip()
