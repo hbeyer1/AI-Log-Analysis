@@ -1,21 +1,12 @@
-"""Stage 1 — PII redaction.
-
-One LLM call per conversation. The model replaces PII with typed, indexed
-placeholders ([TYPE_N]) and returns the message list otherwise unchanged.
-After the call, a structural diff verifies the redaction didn't drop or
-reorder turns. Retried once on verification failure, then marked failed.
-
-Output: redacted_sessions.jsonl — one session per line, with the same shape
-as Session.to_dict() plus `pii_verified`, `pii_failed_reason`, and
-`pii_skipped` fields.
-"""
+"""Stage 1 — PII redaction. Replaces PII with typed placeholders, verifies
+structurally, retries once on failure, writes redacted_sessions.jsonl."""
 from __future__ import annotations
 
 import asyncio
 import json
 import re
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Optional
 
@@ -32,9 +23,6 @@ def load_prompt(name: str) -> str:
 
 def save_prompt(name: str, content: str) -> None:
     (PROMPTS_DIR / name).write_text(content)
-
-
-# --------------------------- dataclasses ------------------------------ #
 
 
 @dataclass
@@ -54,17 +42,11 @@ class PIIResult:
     model: str = ""
 
 
-# --------------------------- prompt formatting ----------------------- #
-
-
 def _messages_payload(session: Session) -> list[dict[str, Any]]:
     return [
         {"idx": i, "role": "user" if m.sender == "human" else m.sender, "text": m.text}
         for i, m in enumerate(session.messages)
     ]
-
-
-# ----------------------------- parsing ------------------------------- #
 
 
 def _strip_fences(text: str) -> str:
@@ -84,9 +66,6 @@ def _extract_json_array(text: str) -> Optional[list[Any]]:
     except json.JSONDecodeError:
         return None
     return parsed if isinstance(parsed, list) else None
-
-
-# ----------------------------- verification -------------------------- #
 
 
 # Accept redacted text up to 1.5× longer (placeholders can be verbose) and
@@ -118,9 +97,6 @@ def _verify(original: list[Message], redacted: list[dict[str, Any]]) -> Optional
     return None
 
 
-# ------------------------------ runner ------------------------------- #
-
-
 async def _redact_one(
     client: LLMClient,
     session: Session,
@@ -132,8 +108,8 @@ async def _redact_one(
         session_id=session.uuid,
         name=session.name,
         created_at=session.created_at,
-        models_used=list(session.models_used),
-        messages=list(session.messages),
+        models_used=session.models_used,
+        messages=session.messages,
         model=model,
     )
 
@@ -174,7 +150,7 @@ async def _redact_one(
                     sender=orig.sender,
                     text=str(red.get("text", "")),
                     created_at=orig.created_at,
-                    tool_calls=list(orig.tool_calls),
+                    tool_calls=orig.tool_calls,
                 ))
             res.messages = new_messages
             res.verified = True
@@ -192,8 +168,8 @@ def skipped_result(session: Session) -> PIIResult:
         session_id=session.uuid,
         name=session.name,
         created_at=session.created_at,
-        models_used=list(session.models_used),
-        messages=list(session.messages),
+        models_used=session.models_used,
+        messages=session.messages,
         skipped=True,
     )
 
@@ -234,9 +210,6 @@ async def run_pii(
     return await asyncio.gather(*(one(s) for s in sessions))
 
 
-# ----------------------------- persistence --------------------------- #
-
-
 def save_pii_results(results: list[PIIResult], path: Path, log_path: Path) -> None:
     with path.open("w") as f:
         for r in results:
@@ -247,7 +220,7 @@ def save_pii_results(results: list[PIIResult], path: Path, log_path: Path) -> No
                 "models_used": r.models_used,
                 "messages": [
                     {"sender": m.sender, "text": m.text, "created_at": m.created_at,
-                     "tool_calls": list(m.tool_calls)}
+                     "tool_calls": m.tool_calls}
                     for m in r.messages
                 ],
                 "pii_verified": r.verified,
@@ -297,7 +270,7 @@ def sessions_from_redacted(rows: list[dict[str, Any]]) -> list[Session]:
                 sender=m.get("sender", "unknown"),
                 text=m.get("text", ""),
                 created_at=m.get("created_at"),
-                tool_calls=list(m.get("tool_calls") or []),
+                tool_calls=m.get("tool_calls") or [],
             )
             for m in row.get("messages", [])
         ]
@@ -306,6 +279,6 @@ def sessions_from_redacted(rows: list[dict[str, Any]]) -> list[Session]:
             name=row.get("name", ""),
             created_at=row.get("created_at", ""),
             messages=messages,
-            models_used=list(row.get("models_used", [])),
+            models_used=row.get("models_used") or [],
         ))
     return sessions

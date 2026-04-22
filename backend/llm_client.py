@@ -26,12 +26,6 @@ OPENAI_PRICES = {
     "gpt-4.1": {"in": 2.0, "out": 8.0},
 }
 
-
-# Fixed reasoning effort for GPT-5.x / o-series models. "medium" is the
-# sweet spot for structured extraction: enough reasoning to converge on
-# consistent output without the latency and cost of "high"/"xhigh".
-DEFAULT_REASONING_EFFORT = "medium"
-
 DEFAULT_MODEL_HEAVY = "claude-sonnet-4-6"
 DEFAULT_MODEL_LIGHT = "claude-haiku-4-5-20251001"
 
@@ -179,7 +173,7 @@ class LLMClient:
         if temperature is not None and _openai_supports_temperature(model):
             kwargs["temperature"] = temperature
         if _openai_supports_reasoning_effort(model):
-            kwargs["reasoning_effort"] = DEFAULT_REASONING_EFFORT
+            kwargs["reasoning_effort"] = "medium"
         resp = await client.chat.completions.create(**kwargs)
         choice = resp.choices[0]
         text = (choice.message.content or "").strip()
@@ -195,7 +189,3 @@ class LLMClient:
             model=model,
             stop_reason=stop_reason,
         )
-
-
-# Backwards-compatible alias for older call sites.
-AnthropicClient = LLMClient

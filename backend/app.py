@@ -315,7 +315,7 @@ async def prompt2_run(body: Prompt2RunRequest) -> dict[str, Any]:
     if features is None:
         raise HTTPException(400, "Run Stage 2 (Prompt 1) first.")
 
-    total_objectives = sum(len(r.get("objectives", []) or []) for r in features)
+    total_objectives = sum(len(r.get("objectives") or []) for r in features)
     job_id = _new_job(max(1, total_objectives))
 
     async def run() -> None:
@@ -369,7 +369,7 @@ def _write_conversations_json() -> None:
     structured = _structured_tools_by_conv()
     out = []
     for r in rows:
-        features = dict(r.get("conversation_features") or {})
+        features = r.get("conversation_features") or {}
         structured_tools = structured.get(r.get("conversation_id", ""), [])
         if structured_tools:
             features["tools_used"] = structured_tools

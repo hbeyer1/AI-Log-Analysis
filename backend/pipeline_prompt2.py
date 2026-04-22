@@ -1,14 +1,5 @@
-"""Stage 3 — Prompt 2: per-objective structured interview.
-
-One LLM call per objective identified by Prompt 1. The sub-transcript is
-sliced deterministically from the (redacted) session messages using the
-turn_indices that Prompt 1 assigned. Output is a JSON object with the
-interview fields: underlying_intent, domain, topic, deliverable,
-workflow_and_resolution, user_approach, user_signals, language_and_tone,
-additional_notes.
-
-Stored as objectives.jsonl — one row per (conversation_id, objective_id).
-"""
+"""Stage 3 — Prompt 2: per-objective structured interview. One LLM call per
+objective on the sliced sub-transcript. Writes objectives.jsonl."""
 from __future__ import annotations
 
 import asyncio
@@ -43,9 +34,6 @@ def load_prompt(name: str) -> str:
     return (PROMPTS_DIR / name).read_text()
 
 
-# ------------------------------ dataclasses ------------------------------ #
-
-
 @dataclass
 class ObjectiveReport:
     conversation_id: str
@@ -58,9 +46,6 @@ class ObjectiveReport:
     duration_s: float = 0.0
     model: str = ""
     error: Optional[str] = None
-
-
-# ----------------------------- transcript slicing ----------------------- #
 
 
 def _role_of(m: Message) -> str:
@@ -84,9 +69,6 @@ def format_sub_transcript(session: Session, turn_indices: list[int]) -> str:
     return "\n".join(lines).strip()
 
 
-# -------------------------------- parsing ------------------------------- #
-
-
 def _strip_fences(text: str) -> str:
     s = text.strip()
     m = re.match(r"^```(?:json)?\s*(.*?)\s*```\s*$", s, re.DOTALL)
@@ -104,9 +86,6 @@ def _extract_json_object(text: str) -> Optional[dict[str, Any]]:
     except json.JSONDecodeError:
         return None
     return parsed if isinstance(parsed, dict) else None
-
-
-# --------------------------------- runner ------------------------------- #
 
 
 @dataclass
@@ -127,7 +106,7 @@ def _collect_tasks(
         session = sessions_by_id.get(sid)
         if session is None:
             continue
-        for obj in row.get("objectives", []) or []:
+        for obj in row.get("objectives") or []:
             if not isinstance(obj, dict):
                 continue
             try:
@@ -222,9 +201,6 @@ async def run_prompt2(
         return []
 
     return await asyncio.gather(*(one(t) for t in tasks))
-
-
-# ----------------------------- persistence ------------------------------ #
 
 
 def save_prompt2_results(results: list[ObjectiveReport], objectives_path: Path,

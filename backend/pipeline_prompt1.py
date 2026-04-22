@@ -1,17 +1,5 @@
-"""Stage 2 — Prompt 1: conversation-level features + objective segmentation.
-
-One LLM call per conversation. Input is the (optionally redacted) transcript
-with indexed, role-labelled turns. Output is a JSON object:
-
-    {
-      "conversation_features": { work_related, num_objectives, num_turns, ... },
-      "objectives": [ { objective_id, description, turn_indices }, ... ]
-    }
-
-The file-level output, conv_features.jsonl, has one row per conversation with
-conversation_id, conversation_features, and objectives. Prompt 2 later slices
-each objective's sub-transcript using turn_indices.
-"""
+"""Stage 2 — Prompt 1: conversation-level features plus objective segmentation.
+One LLM call per (optionally redacted) conversation. Writes conv_features.jsonl."""
 from __future__ import annotations
 
 import asyncio
@@ -37,9 +25,6 @@ def load_prompt(name: str) -> str:
     return (PROMPTS_DIR / name).read_text()
 
 
-# ------------------------------ dataclasses ------------------------------ #
-
-
 @dataclass
 class Objective:
     objective_id: int
@@ -63,9 +48,6 @@ class Prompt1Result:
     error: Optional[str] = None
 
 
-# --------------------------- transcript formatting ---------------------- #
-
-
 def _role_of(m: Message) -> str:
     if m.sender == "human":
         return "user"
@@ -83,9 +65,6 @@ def format_transcript(session: Session) -> str:
         lines.append(m.text.rstrip())
         lines.append("")
     return "\n".join(lines).strip()
-
-
-# ------------------------------- parsing -------------------------------- #
 
 
 def _strip_fences(text: str) -> str:
@@ -135,9 +114,6 @@ def _parse_objectives(raw: Any, n_turns: int) -> list[Objective]:
     return out
 
 
-# --------------------------------- runner ------------------------------- #
-
-
 async def _run_one(
     client: LLMClient,
     session: Session,
@@ -150,7 +126,7 @@ async def _run_one(
         session_id=session.uuid,
         name=session.name,
         created_at=session.created_at,
-        models_used=list(session.models_used),
+        models_used=session.models_used,
         model=model,
     )
     try:
@@ -233,9 +209,6 @@ async def run_prompt1(
         return out
 
     return await asyncio.gather(*(one(s) for s in sessions))
-
-
-# ----------------------------- persistence ------------------------------ #
 
 
 def save_prompt1_results(results: list[Prompt1Result], features_path: Path, log_path: Path) -> None:
