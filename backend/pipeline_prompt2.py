@@ -3,6 +3,7 @@ objective on the sliced sub-transcript. Writes objectives.jsonl."""
 from __future__ import annotations
 
 import asyncio
+import json
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
